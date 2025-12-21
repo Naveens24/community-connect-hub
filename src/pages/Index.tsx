@@ -1,22 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from '@/components/Navbar';
+import { LandingHero } from '@/components/LandingHero';
 import { RequestCard } from '@/components/RequestCard';
 import { RequestCardSkeleton } from '@/components/RequestCardSkeleton';
 import { subscribeToRequests, Request } from '@/services/firestore';
+import { seedDemoData } from '@/services/seedData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Search, Filter } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthModal } from '@/components/AuthModal';
 
 const categories = ['All', 'Technology', 'Design', 'Writing', 'Marketing', 'Finance', 'Legal', 'Other'];
 
 const Index = () => {
+  const { currentUser } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Seed demo data on first load
+    seedDemoData();
+
     const unsubscribe = subscribeToRequests((reqs) => {
       setRequests(reqs);
       setLoading(false);
@@ -37,14 +47,33 @@ const Index = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  const scrollToFeed = () => {
+    feedRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleGetStarted = () => {
+    if (currentUser) {
+      scrollToFeed();
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
+      {/* Landing Hero */}
+      <LandingHero 
+        onGetStarted={handleGetStarted}
+        onBrowseRequests={scrollToFeed}
+      />
+      
+      {/* Requests Feed Section */}
+      <main ref={feedRef} className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Help Requests</h1>
+          <h2 className="text-3xl font-bold mb-2">Help Requests</h2>
           <p className="text-muted-foreground">
             Browse requests and offer your expertise to help others
           </p>
@@ -112,6 +141,15 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t bg-muted/30 py-8 mt-12">
+        <div className="container mx-auto px-4 text-center text-muted-foreground">
+          <p className="text-sm">© 2024 Assistix. Connecting skills with needs.</p>
+        </div>
+      </footer>
+
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 };
