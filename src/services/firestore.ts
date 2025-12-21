@@ -1,0 +1,190 @@
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc,
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  serverTimestamp,
+  getDoc,
+  getDocs,
+  Timestamp
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
+
+// Types
+export interface Request {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  payment: number;
+  createdBy: string;
+  creatorName?: string;
+  creatorPhoto?: string;
+  status: 'open' | 'in_review' | 'assigned' | 'completed';
+  createdAt: Timestamp;
+}
+
+export interface Pitch {
+  id: string;
+  requestId: string;
+  helperId: string;
+  helperName?: string;
+  helperPhoto?: string;
+  pitchText: string;
+  skills: string[];
+  createdAt: Timestamp;
+}
+
+// Requests
+export const subscribeToRequests = (callback: (requests: Request[]) => void) => {
+  const q = query(
+    collection(db, 'requests'),
+    orderBy('createdAt', 'desc')
+  );
+  
+  return onSnapshot(q, async (snapshot) => {
+    const requests: Request[] = [];
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      // Fetch creator info
+      const userRef = doc(db, 'users', data.createdBy);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      
+      requests.push({
+        id: docSnap.id,
+        ...data,
+        creatorName: userData?.name || 'Unknown User',
+        creatorPhoto: userData?.photoURL || ''
+      } as Request);
+    }
+    callback(requests);
+  });
+};
+
+export const createRequest = async (
+  title: string,
+  description: string,
+  category: string,
+  payment: number,
+  userId: string
+) => {
+  const docRef = await addDoc(collection(db, 'requests'), {
+    title,
+    description,
+    category,
+    payment,
+    createdBy: userId,
+    status: 'open',
+    createdAt: serverTimestamp()
+  });
+  return docRef.id;
+};
+
+export const updateRequestStatus = async (requestId: string, status: Request['status']) => {
+  const requestRef = doc(db, 'requests', requestId);
+  await updateDoc(requestRef, { status });
+};
+
+// Pitches
+export const subscribeToPitches = (requestId: string, callback: (pitches: Pitch[]) => void) => {
+  const q = query(
+    collection(db, 'pitches'),
+    where('requestId', '==', requestId),
+    orderBy('createdAt', 'desc')
+  );
+  
+  return onSnapshot(q, async (snapshot) => {
+    const pitches: Pitch[] = [];
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      // Fetch helper info
+      const userRef = doc(db, 'users', data.helperId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      
+      pitches.push({
+        id: docSnap.id,
+        ...data,
+        helperName: userData?.name || 'Unknown User',
+        helperPhoto: userData?.photoURL || ''
+      } as Pitch);
+    }
+    callback(pitches);
+  });
+};
+
+export const createPitch = async (
+  requestId: string,
+  helperId: string,
+  pitchText: string,
+  skills: string[]
+) => {
+  // Check if user already pitched
+  const q = query(
+    collection(db, 'pitches'),
+    where('requestId', '==', requestId),
+    where('helperId', '==', helperId)
+  );
+  const existing = await getDocs(q);
+  if (!existing.empty) {
+    throw new Error('You have already pitched for this request');
+  }
+
+  await addDoc(collection(db, 'pitches'), {
+    requestId,
+    helperId,
+    pitchText,
+    skills,
+    createdAt: serverTimestamp()
+  });
+
+  // Update request status to in_review
+  const requestRef = doc(db, 'requests', requestId);
+  const requestSnap = await getDoc(requestRef);
+  if (requestSnap.exists() && requestSnap.data().status === 'open') {
+    await updateDoc(requestRef, { status: 'in_review' });
+  }
+};
+
+export const hasUserPitched = async (requestId: string, userId: string): Promise<boolean> => {
+  const q = query(
+    collection(db, 'pitches'),
+    where('requestId', '==', requestId),
+    where('helperId', '==', userId)
+  );
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+};
+
+// User Profile
+export const updateUserProfile = async (
+  uid: string,
+  updates: { name?: string; skills?: string[]; photoURL?: string }
+) => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, updates);
+};
+
+export const uploadProfileImage = async (uid: string, file: File): Promise<string> => {
+  const storageRef = ref(storage, `profiles/${uid}.jpg`);
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+  await updateUserProfile(uid, { photoURL: downloadURL });
+  return downloadURL;
+};
+
+export const incrementHelpsGiven = async (uid: string) => {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists()) {
+    const currentHelps = userSnap.data().helpsGiven || 0;
+    await updateDoc(userRef, { helpsGiven: currentHelps + 1 });
+  }
+};
