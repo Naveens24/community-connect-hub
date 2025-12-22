@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { updateUserProfile, uploadProfileImage } from '@/services/firestore';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { updateUserProfile, uploadProfileImage, getUserRequests, getUserPitches, Request, Pitch } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
-import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar, FileText, MessageSquare, DollarSign } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const Profile = () => {
   const { currentUser, userProfile, loading: authLoading, refreshUserProfile } = useAuth();
@@ -27,6 +28,9 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [userRequests, setUserRequests] = useState<Request[]>([]);
+  const [userPitches, setUserPitches] = useState<(Pitch & { requestTitle?: string })[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     if (userProfile) {
@@ -40,6 +44,28 @@ const Profile = () => {
       setAuthModalOpen(true);
     }
   }, [authLoading, currentUser]);
+
+  // Fetch user's requests and pitches
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (currentUser) {
+        try {
+          setLoadingData(true);
+          const [requests, pitches] = await Promise.all([
+            getUserRequests(currentUser.uid),
+            getUserPitches(currentUser.uid)
+          ]);
+          setUserRequests(requests);
+          setUserPitches(pitches);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        } finally {
+          setLoadingData(false);
+        }
+      }
+    };
+    fetchUserData();
+  }, [currentUser]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -279,6 +305,114 @@ const Profile = () => {
                 Save Changes
               </Button>
             </div>
+
+            {/* User Activity Tabs */}
+            <Tabs defaultValue="requests" className="mt-8">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="requests" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  My Requests ({userRequests.length})
+                </TabsTrigger>
+                <TabsTrigger value="pitches" className="gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  My Pitches ({userPitches.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="requests" className="mt-4">
+                {loadingData ? (
+                  <div className="space-y-3">
+                    {[1, 2].map(i => (
+                      <Skeleton key={i} className="h-24 w-full" />
+                    ))}
+                  </div>
+                ) : userRequests.length > 0 ? (
+                  <div className="space-y-3">
+                    {userRequests.map(request => (
+                      <Card key={request.id} className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{request.title}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                              {request.description}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2">
+                              <Badge variant="secondary">{request.category}</Badge>
+                              <span className="flex items-center gap-1 text-sm text-green-600">
+                                <DollarSign className="h-3 w-3" />
+                                {request.payment}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {request.createdAt?.toDate 
+                                  ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true })
+                                  : 'Recently'}
+                              </span>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="shrink-0">
+                            {request.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>You haven't posted any requests yet</p>
+                    <Button variant="link" onClick={() => navigate('/post-request')} className="mt-2">
+                      Post your first request
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="pitches" className="mt-4">
+                {loadingData ? (
+                  <div className="space-y-3">
+                    {[1, 2].map(i => (
+                      <Skeleton key={i} className="h-24 w-full" />
+                    ))}
+                  </div>
+                ) : userPitches.length > 0 ? (
+                  <div className="space-y-3">
+                    {userPitches.map(pitch => (
+                      <Card key={pitch.id} className="p-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Pitched for:</p>
+                          <h4 className="font-medium">{pitch.requestTitle}</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                            {pitch.pitchText}
+                          </p>
+                          {pitch.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {pitch.skills.map(skill => (
+                                <Badge key={skill} variant="outline" className="text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {pitch.createdAt?.toDate 
+                              ? formatDistanceToNow(pitch.createdAt.toDate(), { addSuffix: true })
+                              : 'Recently'}
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>You haven't submitted any pitches yet</p>
+                    <Button variant="link" onClick={() => navigate('/')} className="mt-2">
+                      Browse requests to help
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </main>
