@@ -111,7 +111,17 @@ const demoRequests = [
   },
 ];
 
+let seedingInProgress = false;
+let seedingCompleted = false;
+
 export const seedDemoData = async (): Promise<boolean> => {
+  // Prevent multiple simultaneous seeding attempts
+  if (seedingInProgress || seedingCompleted) {
+    return false;
+  }
+  
+  seedingInProgress = true;
+  
   try {
     // Check if demo data already exists
     const requestsQuery = query(collection(db, 'requests'), limit(1));
@@ -119,6 +129,8 @@ export const seedDemoData = async (): Promise<boolean> => {
     
     if (!existingRequests.empty) {
       console.log('Demo data already exists');
+      seedingCompleted = true;
+      seedingInProgress = false;
       return false;
     }
 
@@ -140,9 +152,12 @@ export const seedDemoData = async (): Promise<boolean> => {
     }
 
     console.log('Demo data seeded successfully');
+    seedingCompleted = true;
+    seedingInProgress = false;
     return true;
   } catch (error) {
     console.error('Error seeding demo data:', error);
+    seedingInProgress = false;
     return false;
   }
 };
