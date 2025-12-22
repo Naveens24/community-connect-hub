@@ -188,3 +188,44 @@ export const incrementHelpsGiven = async (uid: string) => {
     await updateDoc(userRef, { helpsGiven: currentHelps + 1 });
   }
 };
+
+// Get user's posted requests
+export const getUserRequests = async (userId: string): Promise<Request[]> => {
+  const q = query(
+    collection(db, 'requests'),
+    where('createdBy', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  } as Request));
+};
+
+// Get user's submitted pitches with request info
+export const getUserPitches = async (userId: string): Promise<(Pitch & { requestTitle?: string })[]> => {
+  const q = query(
+    collection(db, 'pitches'),
+    where('helperId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  const pitches: (Pitch & { requestTitle?: string })[] = [];
+  
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data();
+    // Fetch request title
+    const requestRef = doc(db, 'requests', data.requestId);
+    const requestSnap = await getDoc(requestRef);
+    const requestTitle = requestSnap.exists() ? requestSnap.data().title : 'Unknown Request';
+    
+    pitches.push({
+      id: docSnap.id,
+      ...data,
+      requestTitle
+    } as Pitch & { requestTitle?: string });
+  }
+  
+  return pitches;
+};
