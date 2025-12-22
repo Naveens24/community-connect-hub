@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { updateUserProfile, uploadProfileImage, getUserRequests, getUserPitches, Request, Pitch } from '@/services/firestore';
+import { updateUserProfile, uploadProfileImage, subscribeToUserRequests, subscribeToUserPitches, Request, Pitch } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
@@ -45,26 +45,25 @@ const Profile = () => {
     }
   }, [authLoading, currentUser]);
 
-  // Fetch user's requests and pitches
+  // Subscribe to user's requests and pitches in real-time
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (currentUser) {
-        try {
-          setLoadingData(true);
-          const [requests, pitches] = await Promise.all([
-            getUserRequests(currentUser.uid),
-            getUserPitches(currentUser.uid)
-          ]);
-          setUserRequests(requests);
-          setUserPitches(pitches);
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        } finally {
-          setLoadingData(false);
-        }
-      }
+    if (!currentUser) return;
+    
+    setLoadingData(true);
+    
+    const unsubRequests = subscribeToUserRequests(currentUser.uid, (requests) => {
+      setUserRequests(requests);
+      setLoadingData(false);
+    });
+    
+    const unsubPitches = subscribeToUserPitches(currentUser.uid, (pitches) => {
+      setUserPitches(pitches);
+    });
+    
+    return () => {
+      unsubRequests();
+      unsubPitches();
     };
-    fetchUserData();
   }, [currentUser]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

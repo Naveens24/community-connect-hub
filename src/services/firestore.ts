@@ -92,6 +92,19 @@ export const updateRequestStatus = async (requestId: string, status: Request['st
   await updateDoc(requestRef, { status });
 };
 
+export const deleteRequest = async (requestId: string) => {
+  // Delete the request
+  const requestRef = doc(db, 'requests', requestId);
+  await deleteDoc(requestRef);
+  
+  // Also delete associated pitches
+  const pitchesQuery = query(collection(db, 'pitches'), where('requestId', '==', requestId));
+  const pitchesSnap = await getDocs(pitchesQuery);
+  for (const pitchDoc of pitchesSnap.docs) {
+    await deleteDoc(doc(db, 'pitches', pitchDoc.id));
+  }
+};
+
 // Pitches
 export const subscribeToPitches = (requestId: string, callback: (pitches: Pitch[]) => void) => {
   const q = query(
@@ -189,43 +202,47 @@ export const incrementHelpsGiven = async (uid: string) => {
   }
 };
 
-// Get user's posted requests
-export const getUserRequests = async (userId: string): Promise<Request[]> => {
+// Subscribe to user's posted requests (real-time)
+export const subscribeToUserRequests = (userId: string, callback: (requests: Request[]) => void) => {
   const q = query(
     collection(db, 'requests'),
     where('createdBy', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(docSnap => ({
-    id: docSnap.id,
-    ...docSnap.data()
-  } as Request));
+  
+  return onSnapshot(q, (snapshot) => {
+    const requests = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    } as Request));
+    callback(requests);
+  });
 };
 
-// Get user's submitted pitches with request info
-export const getUserPitches = async (userId: string): Promise<(Pitch & { requestTitle?: string })[]> => {
+// Subscribe to user's submitted pitches (real-time)
+export const subscribeToUserPitches = (userId: string, callback: (pitches: (Pitch & { requestTitle?: string })[]) => void) => {
   const q = query(
     collection(db, 'pitches'),
     where('helperId', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  const snapshot = await getDocs(q);
-  const pitches: (Pitch & { requestTitle?: string })[] = [];
   
-  for (const docSnap of snapshot.docs) {
-    const data = docSnap.data();
-    // Fetch request title
-    const requestRef = doc(db, 'requests', data.requestId);
-    const requestSnap = await getDoc(requestRef);
-    const requestTitle = requestSnap.exists() ? requestSnap.data().title : 'Unknown Request';
+  return onSnapshot(q, async (snapshot) => {
+    const pitches: (Pitch & { requestTitle?: string })[] = [];
     
-    pitches.push({
-      id: docSnap.id,
-      ...data,
-      requestTitle
-    } as Pitch & { requestTitle?: string });
-  }
-  
-  return pitches;
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      const requestRef = doc(db, 'requests', data.requestId);
+      const requestSnap = await getDoc(requestRef);
+      const requestTitle = requestSnap.exists() ? requestSnap.data().title : 'Unknown Request';
+      
+      pitches.push({
+        id: docSnap.id,
+        ...data,
+        requestTitle
+      } as Pitch & { requestTitle?: string });
+    }
+    
+    callback(pitches);
+  });
 };

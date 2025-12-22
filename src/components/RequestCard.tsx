@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PitchModal } from '@/components/PitchModal';
 import { AuthModal } from '@/components/AuthModal';
-import { Request, hasUserPitched, updateRequestStatus, subscribeToPitches, Pitch, incrementHelpsGiven } from '@/services/firestore';
+import { Request, hasUserPitched, updateRequestStatus, subscribeToPitches, Pitch, incrementHelpsGiven, deleteRequest } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { DollarSign, Clock, CheckCircle, MessageSquare, Users } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, MessageSquare, Users, Trash2 } from 'lucide-react';
 
 interface RequestCardProps {
   request: Request;
@@ -65,11 +65,22 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
     try {
       setLoading(true);
       await updateRequestStatus(request.id, 'completed');
-      // Increment helps given for the helper if assigned
-      // For now, we mark it completed
       toast.success('Request marked as completed!');
     } catch (error) {
       toast.error('Failed to update request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!window.confirm('Are you sure you want to delete this request?')) return;
+    try {
+      setLoading(true);
+      await deleteRequest(request.id);
+      toast.success('Request deleted successfully!');
+    } catch (error) {
+      toast.error('Failed to delete request');
     } finally {
       setLoading(false);
     }
@@ -123,7 +134,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
         <CardFooter className="flex flex-col gap-3 pt-3 border-t">
           <div className="flex items-center justify-between w-full">
             {isOwner ? (
-              <>
+              <div className="flex items-center gap-2 w-full justify-between">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -133,27 +144,39 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
                   <Users className="h-4 w-4" />
                   {showPitches ? 'Hide' : 'View'} Pitches
                 </Button>
-                {request.status !== 'completed' && (
+                <div className="flex items-center gap-2">
+                  {request.status !== 'completed' && (
+                    <Button
+                      size="sm"
+                      onClick={handleMarkCompleted}
+                      disabled={loading}
+                      className="gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Mark Completed
+                    </Button>
+                  )}
                   <Button
+                    variant="destructive"
                     size="sm"
-                    onClick={handleMarkCompleted}
+                    onClick={handleDeleteRequest}
                     disabled={loading}
                     className="gap-2"
                   >
-                    <CheckCircle className="h-4 w-4" />
-                    Mark Completed
+                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </Button>
-                )}
-              </>
+                </div>
+              </div>
             ) : (
               <Button
                 onClick={handleOfferHelp}
-                disabled={hasPitched || request.status === 'completed'}
+                disabled={hasPitched || request.status === 'completed' || request.status === 'assigned'}
                 className="w-full gap-2"
                 variant={hasPitched ? 'secondary' : 'default'}
               >
                 <MessageSquare className="h-4 w-4" />
-                {hasPitched ? 'Already Pitched' : 'Offer Help'}
+                {hasPitched ? 'Already Pitched' : request.status === 'assigned' ? 'Already Assigned' : request.status === 'completed' ? 'Completed' : 'Offer Help'}
               </Button>
             )}
           </div>
