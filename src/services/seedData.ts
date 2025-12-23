@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, limit, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, limit, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const demoUsers = [
@@ -114,6 +114,35 @@ const demoRequests = [
 let seedingInProgress = false;
 let seedingCompleted = false;
 
+// Remove duplicate requests from database
+const removeDuplicates = async (): Promise<void> => {
+  try {
+    const requestsSnap = await getDocs(collection(db, 'requests'));
+    const seenTitles = new Map<string, string>(); // title -> first doc id
+    const duplicateIds: string[] = [];
+    
+    requestsSnap.docs.forEach((docSnap) => {
+      const title = docSnap.data().title;
+      if (seenTitles.has(title)) {
+        duplicateIds.push(docSnap.id);
+      } else {
+        seenTitles.set(title, docSnap.id);
+      }
+    });
+    
+    // Delete duplicates
+    for (const id of duplicateIds) {
+      await deleteDoc(doc(db, 'requests', id));
+    }
+    
+    if (duplicateIds.length > 0) {
+      console.log(`Removed ${duplicateIds.length} duplicate requests`);
+    }
+  } catch (error) {
+    console.error('Error removing duplicates:', error);
+  }
+};
+
 export const seedDemoData = async (): Promise<boolean> => {
   // Prevent multiple simultaneous seeding attempts
   if (seedingInProgress || seedingCompleted) {
@@ -123,6 +152,9 @@ export const seedDemoData = async (): Promise<boolean> => {
   seedingInProgress = true;
   
   try {
+    // First, remove any duplicates
+    await removeDuplicates();
+    
     // Check if demo data already exists
     const requestsQuery = query(collection(db, 'requests'), limit(1));
     const existingRequests = await getDocs(requestsQuery);
