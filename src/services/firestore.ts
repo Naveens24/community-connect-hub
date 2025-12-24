@@ -4,6 +4,7 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc,
+  setDoc,
   query, 
   where, 
   orderBy, 
@@ -182,7 +183,8 @@ export const updateUserProfile = async (
   updates: { name?: string; skills?: string[]; photoURL?: string }
 ) => {
   const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, updates);
+  // Use setDoc with merge to create doc if it doesn't exist
+  await setDoc(userRef, updates, { merge: true });
 };
 
 export const uploadProfileImage = async (uid: string, file: File): Promise<string> => {
@@ -204,10 +206,10 @@ export const incrementHelpsGiven = async (uid: string) => {
 
 // Subscribe to user's posted requests (real-time)
 export const subscribeToUserRequests = (userId: string, callback: (requests: Request[]) => void) => {
+  // Removed orderBy to avoid requiring composite index
   const q = query(
     collection(db, 'requests'),
-    where('createdBy', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('createdBy', '==', userId)
   );
   
   return onSnapshot(q, (snapshot) => {
@@ -215,16 +217,22 @@ export const subscribeToUserRequests = (userId: string, callback: (requests: Req
       id: docSnap.id,
       ...docSnap.data()
     } as Request));
+    // Sort client-side instead
+    requests.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
     callback(requests);
   });
 };
 
 // Subscribe to user's submitted pitches (real-time)
 export const subscribeToUserPitches = (userId: string, callback: (pitches: (Pitch & { requestTitle?: string })[]) => void) => {
+  // Removed orderBy to avoid requiring composite index
   const q = query(
     collection(db, 'pitches'),
-    where('helperId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('helperId', '==', userId)
   );
   
   return onSnapshot(q, async (snapshot) => {
@@ -242,6 +250,13 @@ export const subscribeToUserPitches = (userId: string, callback: (pitches: (Pitc
         requestTitle
       } as Pitch & { requestTitle?: string });
     }
+    
+    // Sort client-side instead
+    pitches.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
     
     callback(pitches);
   });
