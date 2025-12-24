@@ -67,29 +67,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return userSnap.data() as UserProfile;
   };
 
-  const fetchUserProfile = async (uid: string) => {
-    const userRef = doc(db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      setUserProfile(userSnap.data() as UserProfile);
-    }
+  const fetchUserProfile = async (user: User) => {
+    const profile = await createUserProfile(user);
+    setUserProfile(profile);
   };
 
   const refreshUserProfile = async () => {
     if (currentUser) {
-      await fetchUserProfile(currentUser.uid);
+      await fetchUserProfile(currentUser);
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
-        await fetchUserProfile(user.uid);
-      } else {
-        setUserProfile(null);
+      try {
+        if (user) {
+          // Ensure a Firestore user document exists for ALL auth methods (email/password, Google, etc.)
+          await fetchUserProfile(user);
+        } else {
+          setUserProfile(null);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return unsubscribe;
@@ -98,16 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
-    await createUserProfile(result.user);
+    const profile = await createUserProfile(result.user);
+    setUserProfile(profile);
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const profile = await createUserProfile(result.user);
+    setUserProfile(profile);
   };
 
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
-    await createUserProfile(result.user, name);
+    const profile = await createUserProfile(result.user, name);
+    setUserProfile(profile);
   };
 
   const logout = async () => {

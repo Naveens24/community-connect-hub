@@ -5,6 +5,7 @@ import {
   updateDoc, 
   deleteDoc,
   setDoc,
+  increment,
   query, 
   where, 
   orderBy, 
@@ -191,17 +192,16 @@ export const uploadProfileImage = async (uid: string, file: File): Promise<strin
   const storageRef = ref(storage, `profiles/${uid}.jpg`);
   await uploadBytes(storageRef, file);
   const downloadURL = await getDownloadURL(storageRef);
-  await updateUserProfile(uid, { photoURL: downloadURL });
-  return downloadURL;
+  // Cache-bust so the UI shows the latest uploaded image immediately
+  const cacheBustedURL = `${downloadURL}${downloadURL.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  await updateUserProfile(uid, { photoURL: cacheBustedURL });
+  return cacheBustedURL;
 };
 
 export const incrementHelpsGiven = async (uid: string) => {
   const userRef = doc(db, 'users', uid);
-  const userSnap = await getDoc(userRef);
-  if (userSnap.exists()) {
-    const currentHelps = userSnap.data().helpsGiven || 0;
-    await updateDoc(userRef, { helpsGiven: currentHelps + 1 });
-  }
+  // Avoid updateDoc so this works even if the user doc wasn't created yet
+  await setDoc(userRef, { helpsGiven: increment(1) }, { merge: true });
 };
 
 // Subscribe to user's posted requests (real-time)
