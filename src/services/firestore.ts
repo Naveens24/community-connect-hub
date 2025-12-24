@@ -109,10 +109,10 @@ export const deleteRequest = async (requestId: string) => {
 
 // Pitches
 export const subscribeToPitches = (requestId: string, callback: (pitches: Pitch[]) => void) => {
+  // Removed orderBy to avoid requiring composite index
   const q = query(
     collection(db, 'pitches'),
-    where('requestId', '==', requestId),
-    orderBy('createdAt', 'desc')
+    where('requestId', '==', requestId)
   );
   
   return onSnapshot(q, async (snapshot) => {
@@ -131,6 +131,12 @@ export const subscribeToPitches = (requestId: string, callback: (pitches: Pitch[
         helperPhoto: userData?.photoURL || ''
       } as Pitch);
     }
+    // Sort client-side instead
+    pitches.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
     callback(pitches);
   });
 };
