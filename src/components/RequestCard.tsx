@@ -132,9 +132,9 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 pt-3 border-t">
-          <div className="flex items-center justify-between w-full">
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full">
             {isOwner ? (
-              <div className="flex items-center gap-2 w-full justify-between">
+              <div className="flex flex-wrap items-center gap-2 w-full justify-between">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -142,7 +142,8 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
                   className="gap-2"
                 >
                   <Users className="h-4 w-4" />
-                  {showPitches ? 'Hide' : 'View'} Pitches
+                  <span className="hidden sm:inline">{showPitches ? 'Hide' : 'View'} Pitches</span>
+                  <span className="sm:hidden">Pitches</span>
                 </Button>
                 <div className="flex items-center gap-2">
                   {request.status !== 'completed' && (
@@ -153,7 +154,8 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
                       className="gap-2"
                     >
                       <CheckCircle className="h-4 w-4" />
-                      Mark Completed
+                      <span className="hidden sm:inline">Mark Completed</span>
+                      <span className="sm:hidden">Complete</span>
                     </Button>
                   )}
                   <Button
@@ -161,10 +163,10 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
                     size="sm"
                     onClick={handleDeleteRequest}
                     disabled={loading}
-                    className="gap-2"
+                    className="gap-1"
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete
+                    <span className="hidden sm:inline">Delete</span>
                   </Button>
                 </div>
               </div>
