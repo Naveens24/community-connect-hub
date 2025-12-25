@@ -23,19 +23,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
+      // Redirect-based auth will navigate away from the app.
+      toast.message('Redirecting to Google…');
       await signInWithGoogle();
-      toast.success('Welcome to Assistix!');
-      onClose();
     } catch (error: any) {
-      console.error('Google sign-in error:', error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast.error('Sign-in popup was closed. Please try again.');
-      } else if (error.code === 'auth/popup-blocked') {
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      console.error('Google sign-in error:', {
+        code: error?.code,
+        message: error?.message,
+        hostname,
+      });
+
+      if (error?.code === 'auth/unauthorized-domain') {
+        toast.error(
+          `This domain (${hostname || 'unknown'}) isn’t authorized for Google Sign-In. Add it in Firebase Console → Authentication → Settings → Authorized domains.`
+        );
+      } else if (error?.code === 'auth/popup-closed-by-user') {
+        // legacy popup code path (kept for safety)
+        toast.error('Sign-in was cancelled. Please try again.');
+      } else if (error?.code === 'auth/popup-blocked') {
+        // legacy popup code path (kept for safety)
         toast.error('Popup was blocked. Please allow popups for this site.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
+      } else if (error?.code === 'auth/cancelled-popup-request') {
         // User clicked multiple times, ignore
       } else {
-        toast.error(error.message || 'Failed to sign in with Google');
+        toast.error(error?.message || 'Failed to sign in with Google');
       }
     } finally {
       setLoading(false);
