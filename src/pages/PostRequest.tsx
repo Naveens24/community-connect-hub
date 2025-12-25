@@ -14,7 +14,7 @@ import { Loader2, MapPin } from 'lucide-react';
 import { AuthModal } from '@/components/AuthModal';
 import { getCityDisplayName } from '@/lib/cities';
 
-const categories = ['Technology', 'Other'];
+const categories = ['Technology', 'Home & Repair', 'Education', 'Errands', 'Transport', 'Other'];
 
 const PostRequest = () => {
   const { currentUser, userProfile, loading: authLoading } = useAuth();

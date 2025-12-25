@@ -309,3 +309,9 @@ export const subscribeToUserPitches = (userId: string, callback: (pitches: (Pitc
     callback(pitches);
   });
 };
+
+// Delete a pitch
+export const deletePitch = async (pitchId: string) => {
+  const pitchRef = doc(db, 'pitches', pitchId);
+  await deleteDoc(pitchRef);
+};
