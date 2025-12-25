@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import PostRequest from "./pages/PostRequest";
 import Profile from "./pages/Profile";
+import CompleteProfile from "./pages/CompleteProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/post-request" element={<PostRequest />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/complete-profile" element={<CompleteProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

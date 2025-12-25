@@ -29,6 +29,9 @@ export interface Request {
   creatorName?: string;
   creatorPhoto?: string;
   status: 'open' | 'in_review' | 'assigned' | 'completed';
+  city: string;
+  area?: string;
+  society?: string;
   createdAt: Timestamp;
 }
 
@@ -75,7 +78,10 @@ export const createRequest = async (
   description: string,
   category: string,
   payment: number,
-  userId: string
+  userId: string,
+  city: string,
+  area?: string,
+  society?: string
 ) => {
   const docRef = await addDoc(collection(db, 'requests'), {
     title,
@@ -84,9 +90,45 @@ export const createRequest = async (
     payment,
     createdBy: userId,
     status: 'open',
+    city,
+    area: area || '',
+    society: society || '',
     createdAt: serverTimestamp()
   });
   return docRef.id;
+};
+
+// Subscribe to requests filtered by city
+export const subscribeToRequestsByCity = (city: string, callback: (requests: Request[]) => void) => {
+  const q = query(
+    collection(db, 'requests'),
+    where('city', '==', city)
+  );
+  
+  return onSnapshot(q, async (snapshot) => {
+    const requests: Request[] = [];
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      // Fetch creator info
+      const userRef = doc(db, 'users', data.createdBy);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      
+      requests.push({
+        id: docSnap.id,
+        ...data,
+        creatorName: userData?.name || 'Unknown User',
+        creatorPhoto: userData?.photoURL || ''
+      } as Request);
+    }
+    // Sort client-side
+    requests.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    callback(requests);
+  });
 };
 
 export const updateRequestStatus = async (requestId: string, status: Request['status']) => {
@@ -187,7 +229,7 @@ export const hasUserPitched = async (requestId: string, userId: string): Promise
 // User Profile
 export const updateUserProfile = async (
   uid: string,
-  updates: { name?: string; skills?: string[]; photoURL?: string }
+  updates: { name?: string; skills?: string[]; photoURL?: string; activeCity?: string }
 ) => {
   const userRef = doc(db, 'users', uid);
   // Use setDoc with merge to create doc if it doesn't exist

@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateUserProfile, uploadProfileImage, subscribeToUserRequests, subscribeToUserPitches, Request, Pitch } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
-import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar, FileText, MessageSquare, DollarSign } from 'lucide-react';
+import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar, FileText, MessageSquare, DollarSign, MapPin } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { ACTIVE_CITIES, getCityDisplayName } from '@/lib/cities';
 
 const Profile = () => {
   const { currentUser, userProfile, loading: authLoading, refreshUserProfile } = useAuth();
@@ -24,6 +26,7 @@ const Profile = () => {
   const [name, setName] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
+  const [activeCity, setActiveCity] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -36,6 +39,7 @@ const Profile = () => {
     if (userProfile) {
       setName(userProfile.name || '');
       setSkills(userProfile.skills || []);
+      setActiveCity(userProfile.activeCity || '');
     }
   }, [userProfile]);
 
@@ -110,9 +114,18 @@ const Profile = () => {
       return;
     }
 
+    if (!activeCity) {
+      toast.error('Please select an active city');
+      return;
+    }
+
     try {
       setSaving(true);
-      await updateUserProfile(currentUser.uid, { name: name.trim(), skills });
+      await updateUserProfile(currentUser.uid, { 
+        name: name.trim(), 
+        skills,
+        activeCity 
+      });
       await refreshUserProfile();
       toast.success('Profile updated successfully!');
     } catch (error: any) {
@@ -124,7 +137,8 @@ const Profile = () => {
 
   const hasChanges = 
     name !== (userProfile?.name || '') ||
-    JSON.stringify(skills) !== JSON.stringify(userProfile?.skills || []);
+    JSON.stringify(skills) !== JSON.stringify(userProfile?.skills || []) ||
+    activeCity !== (userProfile?.activeCity || '');
 
   if (authLoading) {
     return (
@@ -227,6 +241,14 @@ const Profile = () => {
                     Joined {createdAt}
                   </span>
                 </div>
+                {userProfile?.activeCity && (
+                  <div className="flex items-center gap-1 justify-center sm:justify-start mt-2">
+                    <Badge variant="secondary" className="gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {getCityDisplayName(userProfile.activeCity)}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -249,6 +271,27 @@ const Profile = () => {
                   onChange={(e) => setName(e.target.value)}
                   disabled={saving}
                 />
+              </div>
+
+              {/* Active City */}
+              <div className="space-y-2">
+                <Label>Active City</Label>
+                <Select value={activeCity} onValueChange={setActiveCity} disabled={saving}>
+                  <SelectTrigger className="w-full">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Select your active city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVE_CITIES.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Your active city determines which tasks you can see and post.
+                </p>
               </div>
 
               <div className="space-y-2">

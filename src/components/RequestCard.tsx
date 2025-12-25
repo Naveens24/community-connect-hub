@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PitchModal } from '@/components/PitchModal';
 import { AuthModal } from '@/components/AuthModal';
-import { Request, hasUserPitched, updateRequestStatus, subscribeToPitches, Pitch, incrementHelpsGiven, deleteRequest } from '@/services/firestore';
+import { Request, hasUserPitched, updateRequestStatus, subscribeToPitches, Pitch, deleteRequest } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { DollarSign, Clock, CheckCircle, MessageSquare, Users, Trash2 } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, MessageSquare, Users, Trash2, MapPin } from 'lucide-react';
 
 interface RequestCardProps {
   request: Request;
@@ -90,6 +90,12 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
     ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true })
     : 'Just now';
 
+  // Build location string
+  const locationParts = [];
+  if (request.area) locationParts.push(request.area);
+  if (request.society) locationParts.push(request.society);
+  const locationString = locationParts.join(', ');
+
   return (
     <>
       <Card className="hover:shadow-md transition-shadow">
@@ -121,6 +127,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
           <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
             {request.description}
           </p>
+          
+          {/* Location */}
+          {locationString && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+              <MapPin className="h-3 w-3 text-primary" />
+              {locationString}
+            </div>
+          )}
           
           <div className="flex items-center gap-4">
             <Badge variant="secondary">{request.category}</Badge>
