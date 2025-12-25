@@ -1,13 +1,17 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, MapPin, Users, CheckCircle, Zap } from 'lucide-react';
+import { ArrowRight, MapPin, Users, CheckCircle, Zap, PlusCircle } from 'lucide-react';
 
 interface LandingHeroProps {
   onGetStarted: () => void;
   onBrowseRequests: () => void;
+  isLoggedIn?: boolean;
 }
 
-export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted, onBrowseRequests }) => {
+export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted, onBrowseRequests, isLoggedIn }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="relative overflow-hidden">
       {/* Background Pattern */}
@@ -38,10 +42,17 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted, onBrowse
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Button size="lg" onClick={onGetStarted} className="text-lg px-8">
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            {isLoggedIn ? (
+              <Button size="lg" onClick={() => navigate('/post-request')} className="text-lg px-8">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Post Request
+              </Button>
+            ) : (
+              <Button size="lg" onClick={onGetStarted} className="text-lg px-8">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
             <Button size="lg" variant="outline" onClick={onBrowseRequests} className="text-lg px-8">
               Browse Requests
             </Button>
