@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -79,12 +80,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Handle redirect result on app load
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          console.log('Redirect sign-in successful:', result.user.email);
+          await createUserProfile(result.user);
+        }
+      } catch (error: any) {
+        console.error('Redirect sign-in error:', error.code, error.message);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
+
+  // Global auth state observer
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       try {
         if (user) {
-          // Ensure a Firestore user document exists for ALL auth methods (email/password, Google, etc.)
+          // Ensure a Firestore user document exists for ALL auth methods
           await fetchUserProfile(user);
         } else {
           setUserProfile(null);
@@ -97,11 +116,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
+  // Google Sign-In using redirect method
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const profile = await createUserProfile(result.user);
-    setUserProfile(profile);
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
+    try {
+      await signInWithRedirect(auth, provider);
+      // Note: The redirect will navigate away from the page
+      // The result is handled by getRedirectResult on page load
+    } catch (error: any) {
+      console.error('Google sign-in redirect error:', error.code, error.message);
+      throw error;
+    }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
@@ -118,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     await signOut(auth);
+    setCurrentUser(null);
     setUserProfile(null);
   };
 
