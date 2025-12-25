@@ -17,7 +17,7 @@ import { getCityDisplayName } from '@/lib/cities';
 const categories = ['All', 'Technology', 'Other'];
 
 const Index = () => {
-  const { currentUser, userProfile, loading: authLoading } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, isNewUser } = useAuth();
   const navigate = useNavigate();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +27,12 @@ const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Redirect to complete profile if logged in but no activeCity
+  // Redirect to complete profile if logged in but profile incomplete or new user
   useEffect(() => {
-    if (!authLoading && currentUser && userProfile && !userProfile.activeCity) {
+    if (!authLoading && currentUser && (isNewUser || (userProfile && !userProfile.activeCity))) {
       navigate('/complete-profile');
     }
-  }, [authLoading, currentUser, userProfile, navigate]);
+  }, [authLoading, currentUser, userProfile, isNewUser, navigate]);
 
   useEffect(() => {
     // Seed demo data on first load
