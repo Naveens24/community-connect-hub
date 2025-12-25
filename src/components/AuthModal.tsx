@@ -27,7 +27,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
       toast.success('Welcome to Assistix!');
       onClose();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to sign in with Google');
+      console.error('Google sign-in error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign-in popup was closed. Please try again.');
+      } else if (error.code === 'auth/popup-blocked') {
+        toast.error('Popup was blocked. Please allow popups for this site.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // User clicked multiple times, ignore
+      } else {
+        toast.error(error.message || 'Failed to sign in with Google');
+      }
     } finally {
       setLoading(false);
     }

@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { getCityDisplayName } from '@/lib/cities';
 
-const categories = ['All', 'Technology', 'Design', 'Writing', 'Marketing', 'Finance', 'Legal', 'Other'];
+const categories = ['All', 'Technology', 'Other'];
 
 const Index = () => {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
@@ -199,7 +199,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t bg-muted/30 py-8 mt-12">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p className="text-sm">© 2024 Assistix. Connecting skills with needs.</p>
+          <p className="text-sm">© 2025 Assistix. Connecting skills with needs.</p>
         </div>
       </footer>
 
