@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PitchModal } from '@/components/PitchModal';
 import { AuthModal } from '@/components/AuthModal';
+import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { Request, hasUserPitched, updateRequestStatus, subscribeToPitches, Pitch, deleteRequest } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { DollarSign, Clock, CheckCircle, MessageSquare, Users, Trash2, MapPin } from 'lucide-react';
+import { Clock, CheckCircle, MessageSquare, Users, Trash2, MapPin, IndianRupee } from 'lucide-react';
 
 interface RequestCardProps {
   request: Request;
@@ -33,6 +34,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
   const { currentUser } = useAuth();
   const [pitchModalOpen, setPitchModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [hasPitched, setHasPitched] = useState(false);
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [showPitches, setShowPitches] = useState(false);
@@ -74,11 +76,11 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
   };
 
   const handleDeleteRequest = async () => {
-    if (!window.confirm('Are you sure you want to delete this request?')) return;
     try {
       setLoading(true);
       await deleteRequest(request.id);
       toast.success('Request deleted successfully!');
+      setDeleteModalOpen(false);
     } catch (error) {
       toast.error('Failed to delete request');
     } finally {
@@ -139,7 +141,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
           <div className="flex items-center gap-4">
             <Badge variant="secondary">{request.category}</Badge>
             <div className="flex items-center gap-1 text-sm font-medium text-green-600">
-              <DollarSign className="h-4 w-4" />
+              <IndianRupee className="h-4 w-4" />
               {request.payment}
             </div>
           </div>
@@ -175,7 +177,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={handleDeleteRequest}
+                    onClick={() => setDeleteModalOpen(true)}
                     disabled={loading}
                     className="gap-1"
                   >
@@ -241,6 +243,12 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
         requestTitle={request.title}
       />
       <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      <DeleteConfirmModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteRequest}
+        loading={loading}
+      />
     </>
   );
 };

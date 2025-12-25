@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createRequest } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, DollarSign, MapPin } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { AuthModal } from '@/components/AuthModal';
 import { getCityDisplayName } from '@/lib/cities';
 
-const categories = ['Technology', 'Design', 'Writing', 'Marketing', 'Finance', 'Legal', 'Other'];
+const categories = ['Technology', 'Other'];
 
 const PostRequest = () => {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
@@ -146,18 +146,18 @@ const PostRequest = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="payment">Payment Amount ($)</Label>
+                  <Label htmlFor="payment">Reward Amount (₹)</Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <span className="absolute left-3 top-3 text-muted-foreground text-sm font-medium">₹</span>
                     <Input
                       id="payment"
                       type="number"
                       min="1"
-                      step="0.01"
-                      placeholder="50"
+                      step="1"
+                      placeholder="100"
                       value={payment}
                       onChange={(e) => setPayment(e.target.value)}
-                      className="pl-10"
+                      className="pl-8"
                       disabled={loading}
                     />
                   </div>

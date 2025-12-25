@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Briefcase, Star, Zap } from 'lucide-react';
+import { ArrowRight, MapPin, Users, CheckCircle, Zap } from 'lucide-react';
 
 interface LandingHeroProps {
   onGetStarted: () => void;
@@ -19,26 +19,25 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted, onBrowse
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Zap className="h-4 w-4" />
-            <span>Community-Powered Assistance</span>
+            <span>Community-Powered Help</span>
           </div>
 
           {/* Main Heading */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Get Help from{' '}
+            Get Everyday Help from{' '}
             <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Skilled Experts
-            </span>{' '}
-            in Your Community
+              Your Neighbors
+            </span>
           </h1>
 
           {/* Subheading */}
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Post your requests, connect with talented helpers, and get things done. 
-            Whether it's tech, design, writing, or any skill — find the right person for the job.
+            Need help carrying groceries? Setting up your phone? Or just finding directions? 
+            Connect with helpful people in your locality who are ready to assist.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button size="lg" onClick={onGetStarted} className="text-lg px-8">
               Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -48,62 +47,78 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted, onBrowse
             </Button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div className="text-2xl font-bold">500+</div>
-              <div className="text-sm text-muted-foreground">Active Users</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Briefcase className="h-5 w-5 text-primary" />
-              </div>
-              <div className="text-2xl font-bold">1,200+</div>
-              <div className="text-sm text-muted-foreground">Tasks Completed</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Star className="h-5 w-5 text-primary" />
-              </div>
-              <div className="text-2xl font-bold">4.9</div>
-              <div className="text-sm text-muted-foreground">Avg Rating</div>
+          {/* How Assistix Works - 3 Step Flow */}
+          <div className="bg-card border rounded-2xl p-8 shadow-sm">
+            <h2 className="text-xl font-semibold mb-8 text-center">How Assistix Works</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <StepCard
+                stepNumber={1}
+                icon={<MapPin className="h-6 w-6 text-primary" />}
+                title="Choose Your City"
+                description="Select your active city to see requests and helpers in your area."
+              />
+              <StepCard
+                stepNumber={2}
+                icon={<Users className="h-6 w-6 text-primary" />}
+                title="Post or Browse Requests"
+                description="Need help? Post a request. Want to help? Browse what neighbors need."
+              />
+              <StepCard
+                stepNumber={3}
+                icon={<CheckCircle className="h-6 w-6 text-primary" />}
+                title="Help Nearby, Instantly"
+                description="Connect with helpers, get things done, and build community trust."
+              />
             </div>
           </div>
         </div>
 
-        {/* Features Section */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <FeatureCard
-            icon={<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Briefcase className="h-6 w-6 text-primary" /></div>}
-            title="Post Your Request"
-            description="Describe what you need help with, set your budget, and let experts come to you."
-          />
-          <FeatureCard
-            icon={<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Users className="h-6 w-6 text-primary" /></div>}
-            title="Review Pitches"
-            description="Compare offers from skilled community members and choose the best fit."
-          />
-          <FeatureCard
-            icon={<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Star className="h-6 w-6 text-primary" /></div>}
-            title="Get It Done"
-            description="Collaborate with your chosen helper and mark the task complete when satisfied."
-          />
+        {/* Why Assistix Section */}
+        <div className="mt-16 max-w-5xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">Why Assistix?</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <FeatureCard
+              title="Hyperlocal Help"
+              description="Get assistance from people who are just around the corner. No waiting for professionals."
+            />
+            <FeatureCard
+              title="Everyday Tasks"
+              description="From carrying groceries to tutoring kids — find help for simple, everyday needs."
+            />
+            <FeatureCard
+              title="Community Trust"
+              description="Build connections with neighbors. Help others and earn recognition in your community."
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const FeatureCard: React.FC<{
+const StepCard: React.FC<{
+  stepNumber: number;
   icon: React.ReactNode;
   title: string;
   description: string;
-}> = ({ icon, title, description }) => (
-  <div className="p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-shadow">
-    <div className="mb-4">{icon}</div>
+}> = ({ stepNumber, icon, title, description }) => (
+  <div className="text-center relative">
+    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+      {icon}
+    </div>
+    <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center md:left-1/2 md:-translate-x-[4rem]">
+      {stepNumber}
+    </div>
+    <h3 className="text-lg font-semibold mb-2">{title}</h3>
+    <p className="text-muted-foreground text-sm">{description}</p>
+  </div>
+);
+
+const FeatureCard: React.FC<{
+  title: string;
+  description: string;
+}> = ({ title, description }) => (
+  <div className="p-6 rounded-2xl bg-card border shadow-sm hover:shadow-md transition-shadow text-center">
     <h3 className="text-lg font-semibold mb-2">{title}</h3>
     <p className="text-muted-foreground text-sm">{description}</p>
   </div>
