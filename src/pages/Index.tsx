@@ -92,6 +92,7 @@ const Index = () => {
       <LandingHero 
         onGetStarted={handleGetStarted}
         onBrowseRequests={scrollToFeed}
+        isLoggedIn={!!currentUser && !!userProfile?.activeCity}
       />
       
       {/* Requests Feed Section */}
