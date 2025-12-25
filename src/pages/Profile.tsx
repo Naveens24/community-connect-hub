@@ -10,11 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { updateUserProfile, uploadProfileImage, subscribeToUserRequests, subscribeToUserPitches, Request, Pitch } from '@/services/firestore';
+import { updateUserProfile, uploadProfileImage, subscribeToUserRequests, subscribeToUserPitches, updateRequestStatus, deleteRequest, deletePitch, subscribeToPitches, Request, Pitch } from '@/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
-import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar, FileText, MessageSquare, DollarSign, MapPin } from 'lucide-react';
+import { Loader2, Camera, Plus, X, Trophy, Mail, Calendar, FileText, MessageSquare, DollarSign, MapPin, Trash2, CheckCircle, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ACTIVE_CITIES, getCityDisplayName } from '@/lib/cities';
 
@@ -34,6 +35,14 @@ const Profile = () => {
   const [userRequests, setUserRequests] = useState<Request[]>([]);
   const [userPitches, setUserPitches] = useState<(Pitch & { requestTitle?: string })[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [deleteRequestModalOpen, setDeleteRequestModalOpen] = useState(false);
+  const [deletePitchModalOpen, setDeletePitchModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedPitchId, setSelectedPitchId] = useState<string | null>(null);
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [requestPitches, setRequestPitches] = useState<Record<string, Pitch[]>>({});
+  const [loadingPitches, setLoadingPitches] = useState<Record<string, boolean>>({});
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (userProfile) {
@@ -139,6 +148,65 @@ const Profile = () => {
     name !== (userProfile?.name || '') ||
     JSON.stringify(skills) !== JSON.stringify(userProfile?.skills || []) ||
     activeCity !== (userProfile?.activeCity || '');
+
+  const handleDeleteRequest = async () => {
+    if (!selectedRequestId) return;
+    try {
+      setActionLoading(selectedRequestId);
+      await deleteRequest(selectedRequestId);
+      toast.success('Request deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete request');
+    } finally {
+      setActionLoading(null);
+      setDeleteRequestModalOpen(false);
+      setSelectedRequestId(null);
+    }
+  };
+
+  const handleMarkCompleted = async (requestId: string) => {
+    try {
+      setActionLoading(requestId);
+      await updateRequestStatus(requestId, 'completed');
+      toast.success('Request marked as completed');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update request');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeletePitch = async () => {
+    if (!selectedPitchId) return;
+    try {
+      setActionLoading(selectedPitchId);
+      await deletePitch(selectedPitchId);
+      toast.success('Pitch deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete pitch');
+    } finally {
+      setActionLoading(null);
+      setDeletePitchModalOpen(false);
+      setSelectedPitchId(null);
+    }
+  };
+
+  const toggleViewPitches = (requestId: string) => {
+    if (expandedRequestId === requestId) {
+      setExpandedRequestId(null);
+    } else {
+      setExpandedRequestId(requestId);
+      // Load pitches if not already loaded
+      if (!requestPitches[requestId]) {
+        setLoadingPitches(prev => ({ ...prev, [requestId]: true }));
+        const unsubscribe = subscribeToPitches(requestId, (pitches) => {
+          setRequestPitches(prev => ({ ...prev, [requestId]: pitches }));
+          setLoadingPitches(prev => ({ ...prev, [requestId]: false }));
+        });
+        // Store unsubscribe function for cleanup (simplified - in production you'd track these)
+      }
+    }
+  };
 
   if (authLoading) {
     return (
@@ -378,7 +446,7 @@ const Profile = () => {
                             <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                               {request.description}
                             </p>
-                            <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-3 mt-2 flex-wrap">
                               <Badge variant="secondary">{request.category}</Badge>
                               <span className="flex items-center gap-1 text-sm text-green-600">
                                 <DollarSign className="h-3 w-3" />
@@ -390,11 +458,96 @@ const Profile = () => {
                                   : 'Recently'}
                               </span>
                             </div>
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-2 mt-3 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleViewPitches(request.id)}
+                                className="gap-1"
+                              >
+                                {expandedRequestId === request.id ? (
+                                  <>
+                                    <EyeOff className="h-3 w-3" />
+                                    Hide Pitches
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="h-3 w-3" />
+                                    View Pitches
+                                  </>
+                                )}
+                              </Button>
+                              {request.status !== 'completed' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleMarkCompleted(request.id)}
+                                  disabled={actionLoading === request.id}
+                                  className="gap-1"
+                                >
+                                  {actionLoading === request.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-3 w-3" />
+                                  )}
+                                  Mark Completed
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRequestId(request.id);
+                                  setDeleteRequestModalOpen(true);
+                                }}
+                                disabled={actionLoading === request.id}
+                                className="gap-1 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Delete
+                              </Button>
+                            </div>
                           </div>
                           <Badge variant="outline" className="shrink-0">
                             {request.status.replace('_', ' ')}
                           </Badge>
                         </div>
+                        {/* Pitches section */}
+                        {expandedRequestId === request.id && (
+                          <div className="mt-4 pt-4 border-t">
+                            <h5 className="text-sm font-medium mb-2">Pitches for this request</h5>
+                            {loadingPitches[request.id] ? (
+                              <div className="space-y-2">
+                                {[1, 2].map(i => (
+                                  <Skeleton key={i} className="h-16 w-full" />
+                                ))}
+                              </div>
+                            ) : requestPitches[request.id]?.length > 0 ? (
+                              <div className="space-y-2">
+                                {requestPitches[request.id].map(pitch => (
+                                  <div key={pitch.id} className="p-3 bg-muted rounded-lg">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-medium text-sm">{pitch.helperName}</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{pitch.pitchText}</p>
+                                    {pitch.skills.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-2">
+                                        {pitch.skills.map(skill => (
+                                          <Badge key={skill} variant="outline" className="text-xs">
+                                            {skill}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No pitches received yet</p>
+                            )}
+                          </div>
+                        )}
                       </Card>
                     ))}
                   </div>
@@ -420,26 +573,45 @@ const Profile = () => {
                   <div className="space-y-3">
                     {userPitches.map(pitch => (
                       <Card key={pitch.id} className="p-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Pitched for:</p>
-                          <h4 className="font-medium">{pitch.requestTitle}</h4>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
-                            {pitch.pitchText}
-                          </p>
-                          {pitch.skills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {pitch.skills.map(skill => (
-                                <Badge key={skill} variant="outline" className="text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {pitch.createdAt?.toDate 
-                              ? formatDistanceToNow(pitch.createdAt.toDate(), { addSuffix: true })
-                              : 'Recently'}
-                          </p>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Pitched for:</p>
+                            <h4 className="font-medium">{pitch.requestTitle}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                              {pitch.pitchText}
+                            </p>
+                            {pitch.skills.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {pitch.skills.map(skill => (
+                                  <Badge key={skill} variant="outline" className="text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {pitch.createdAt?.toDate 
+                                ? formatDistanceToNow(pitch.createdAt.toDate(), { addSuffix: true })
+                                : 'Recently'}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPitchId(pitch.id);
+                              setDeletePitchModalOpen(true);
+                            }}
+                            disabled={actionLoading === pitch.id}
+                            className="gap-1 text-destructive hover:text-destructive shrink-0"
+                          >
+                            {actionLoading === pitch.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                            Delete
+                          </Button>
                         </div>
                       </Card>
                     ))}
@@ -458,6 +630,28 @@ const Profile = () => {
           </CardContent>
         </Card>
       </main>
+
+      <DeleteConfirmModal
+        open={deleteRequestModalOpen}
+        onClose={() => {
+          setDeleteRequestModalOpen(false);
+          setSelectedRequestId(null);
+        }}
+        onConfirm={handleDeleteRequest}
+        title="Delete Request?"
+        message="Are you sure you want to delete this request? This action cannot be undone."
+      />
+
+      <DeleteConfirmModal
+        open={deletePitchModalOpen}
+        onClose={() => {
+          setDeletePitchModalOpen(false);
+          setSelectedPitchId(null);
+        }}
+        onConfirm={handleDeletePitch}
+        title="Delete Pitch?"
+        message="Are you sure you want to delete this pitch? This action cannot be undone."
+      />
     </div>
   );
 };

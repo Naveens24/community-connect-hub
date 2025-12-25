@@ -15,6 +15,8 @@ interface DeleteConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   loading?: boolean;
+  title?: string;
+  message?: string;
 }
 
 export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
@@ -22,14 +24,16 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   onClose,
   onConfirm,
   loading = false,
+  title = 'Delete Request?',
+  message = 'Are you sure you want to delete this request? This action cannot be undone.',
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this request? This action cannot be undone.
+            {message}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
