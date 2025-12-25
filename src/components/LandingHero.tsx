@@ -103,11 +103,11 @@ const StepCard: React.FC<{
   description: string;
 }> = ({ stepNumber, icon, title, description }) => (
   <div className="text-center relative">
-    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+    <div className="relative w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
       {icon}
-    </div>
-    <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center md:left-1/2 md:-translate-x-[4rem]">
-      {stepNumber}
+      <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+        {stepNumber}
+      </div>
     </div>
     <h3 className="text-lg font-semibold mb-2">{title}</h3>
     <p className="text-muted-foreground text-sm">{description}</p>
