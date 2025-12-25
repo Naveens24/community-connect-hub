@@ -18,6 +18,7 @@ export interface UserProfile {
   photoURL: string;
   skills: string[];
   helpsGiven: number;
+  activeCity?: string;
   createdAt: any;
 }
 
