@@ -84,10 +84,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleRedirectResult = async () => {
       try {
+        console.log('Checking for redirect result...');
         const result = await getRedirectResult(auth);
         if (result?.user) {
           console.log('Redirect sign-in successful:', result.user.email);
-          await createUserProfile(result.user);
+          const profile = await createUserProfile(result.user);
+          setUserProfile(profile);
+          setCurrentUser(result.user);
+          
+          // Check if profile is incomplete (no activeCity) and redirect to complete-profile
+          if (!profile.activeCity) {
+            console.log('Profile incomplete, redirecting to complete-profile');
+            window.location.href = '/complete-profile';
+          } else {
+            console.log('Profile complete, user is ready');
+          }
+        } else {
+          console.log('No redirect result found');
         }
       } catch (error: any) {
         console.error('Redirect sign-in error:', error.code, error.message);
